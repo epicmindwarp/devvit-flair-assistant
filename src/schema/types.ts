@@ -57,6 +57,7 @@ export type FlairEntry = {
     removalReason?: FlairRemovalReason;
     userNote?: FlairNote;
     message?: FlairMessage;
+    removeExistingSticky?: boolean;
 }
 
 export type FlairEntries = FlairEntry[];

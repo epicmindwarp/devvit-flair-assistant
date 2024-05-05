@@ -1,6 +1,6 @@
 import {ModAction, PostV2} from "@devvit/protos";
 import {BanUserOptions, TriggerContext, SetUserFlairOptions, SetPostFlairOptions} from "@devvit/public-api";
-import {hasPerformedAction, hasPerformedActions, replacePlaceholders, getRecommendedPlaceholdersFromModAction, assembleRemovalReason, submitPostReply, ignoreReportsByPostId, setLockByPostId} from "devvit-helpers";
+import {hasPerformedAction, hasPerformedActions, replacePlaceholders, getRecommendedPlaceholdersFromModAction, assembleRemovalReason, submitPostReply, ignoreReportsByPostId, setLockByPostId, getStickiedComment} from "devvit-helpers";
 import {getFlairAppSettings} from "../appSettings.js";
 
 export async function handleFlairUpdate (event: ModAction, context: TriggerContext) {
@@ -187,6 +187,18 @@ export async function handleFlairUpdate (event: ModAction, context: TriggerConte
             await setLockByPostId(context.reddit, postId, true).catch(e => console.error(`Failed to fetch ${postId} in redditHelpers.lockByPostId`, e));
         } else {
             console.log(`Skipped lock on ${postId} because it got a lock action in the past ${actionDebounce} seconds.`);
+        }
+    }
+
+    // Handle removal of existing stickied message by the bot
+    if (flairConfig.removeExistingSticky) {
+        if (!await hasPerformedAction(context.reddit, subreddit, postId, "removeExistingSticky", moderatorName, false, actionDebounce)) {
+            const existingSticky = await getStickiedComment(context.reddit, postId);
+            if (existingSticky) {
+                if (["AutoModerator"].includes(existingSticky.authorName) || existingSticky.authorId === context.appAccountId) {
+                    await context.reddit.remove(existingSticky.postId, false).catch(e => console.error(`Failed to remove ${postId}`, e));
+                }
+            }
         }
     }
 
